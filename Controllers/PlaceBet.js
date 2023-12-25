@@ -1,13 +1,8 @@
-// Database connection configuration
 const mysql = require("mysql2/promise");
+const dbConfig = require("../Config/config");
+const { fetchBalance } = require("../Utils/Utils");
 
-const dbConfig = {
-  host: "stage-db-1.cmhfjy9fvag5.ap-south-1.rds.amazonaws.com",
-  user: "admin",
-  database: "oscardb",
-  password: "YNLx5TMezvpXZmS",
-};
-
+let currentBalance = null;
 const placeBet = async (req, res) => {
   const {
     userId,
@@ -31,19 +26,14 @@ const placeBet = async (req, res) => {
     await connection.beginTransaction();
 
     try {
-      // Check if the user with the given userId and token exists
-      const [userResult] = await connection.execute(
-        "SELECT LimitCurr FROM clientInfo where token = ?",
-        [token]
-      );
+      currentBalance = await fetchBalance(userId);
 
-      if (userResult.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "User not found or invalid credentials" });
+      if (!currentBalance) {
+        return res.status(404).json({
+          error: "User not found or invalid credentials",
+          message: "RS_ERR",
+        });
       }
-      console.log(userResult);
-      const currentBalance = userResult[0].LimitCurr;
       console.log(currentBalance);
 
       // Check if the user has enough balance to place the bet
@@ -83,7 +73,12 @@ const placeBet = async (req, res) => {
       // Commit the transaction
       await connection.commit();
 
-      res.json({ success: true, balance: newBalance, bet: betResult });
+      res.json({
+        success: true,
+        balance: newBalance,
+        bet: betResult,
+        message: "RS_OK",
+      });
     } catch (error) {
       // Rollback the transaction in case of an error
       await connection.rollback();
