@@ -20,7 +20,6 @@ const fetchBalance = async (userId) => {
     return balance;
   } catch (error) {
     console.error("Error fetching balance:", error);
-    // Handle the error as needed, e.g., log it or throw an exception
     throw error;
   } finally {
     // Release the connection when done
