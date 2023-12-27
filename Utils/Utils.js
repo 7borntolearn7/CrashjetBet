@@ -1,7 +1,7 @@
 const mysql = require("mysql2/promise");
 const dbConfig = require("../Config/config");
 
-const fetchBalance = async (userId) => {
+const fetchBalance = async (userId, token) => {
   let connection = null;
 
   try {
@@ -11,8 +11,8 @@ const fetchBalance = async (userId) => {
     // Query the database to fetch the balance
 
     const [result] = await connection.execute(
-      "SELECT LimitCurr FROM clientInfo WHERE id = ?",
-      [userId]
+      "SELECT LimitCurr FROM clientInfo WHERE id = ? AND token=?",
+      [userId, token]
     );
 
     // Return balance or null if user not found

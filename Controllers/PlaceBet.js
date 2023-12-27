@@ -19,6 +19,34 @@ const placeBet = async (req, res) => {
     reference_request_uuid,
   } = req.body;
 
+  const requiredAttributes = [
+    "userId",
+    "token",
+    "operatorId",
+    "currency",
+    "amount",
+    "roundId",
+    "request_uuid",
+    "bet_id",
+    "bet_time",
+    "game_id",
+    "game_code",
+    "reference_request_uuid",
+  ];
+
+  const missingAttributes = requiredAttributes.filter(
+    (attr) => !req.body[attr]
+  );
+
+  if (missingAttributes.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Bad Request",
+      missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
+      message: "RS_ERR",
+      balance: 0,
+    });
+  }
   try {
     // Create a MySQL connection
     const connection = await mysql.createConnection(dbConfig);
@@ -27,21 +55,23 @@ const placeBet = async (req, res) => {
     await connection.beginTransaction();
 
     try {
-      currentBalance = await fetchBalance(userId);
+      currentBalance = await fetchBalance(userId, token);
 
       if (!currentBalance) {
         return res.status(404).json({
           error: "User not found or invalid credentials",
           message: "RS_ERR",
+          balance: 0,
         });
       }
       console.log(currentBalance);
 
       // Check if the user has enough balance to place the bet
       if (currentBalance < amount) {
-        return res
-          .status(400)
-          .json({ error: "Insufficient balance to place the bet" });
+        return res.status(400).json({
+          error: "Insufficient balance to place the bet",
+          message: "RS_ERR",
+        });
       }
 
       // Deduct the bet amount from the user's balance
@@ -85,14 +115,23 @@ const placeBet = async (req, res) => {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error placing bet:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "RS_ERR",
+        balance: 0,
+      });
     } finally {
       // Close the connection when done
       connection.end();
     }
   } catch (error) {
     console.error("Error connecting to the database:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "RS_ERR",
+      balance: 0,
+    });
   }
 };
 

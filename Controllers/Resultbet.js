@@ -1,9 +1,9 @@
 const mysql = require("mysql2/promise");
 const dbConfig = require("../Config/config");
-const { fetchBalance } = require("../Utils/Utils"); 
+const { fetchBalance } = require("../Utils/Utils");
 let newBalance = null;
 
-const getResult = async (req, res) => {
+const resultbet = async (req, res) => {
   const {
     userId,
     token,
@@ -19,13 +19,44 @@ const getResult = async (req, res) => {
     reference_request_uuid,
   } = req.body;
 
+  const requiredAttributes = [
+    "userId",
+    "token",
+    "operatorId",
+    "currency",
+    "amount",
+    "roundId",
+    "request_uuid",
+    "bet_id",
+    "bet_time",
+    "game_id",
+    "game_code",
+    "reference_request_uuid",
+  ];
+
+  const missingAttributes = requiredAttributes.filter(
+    (attr) => !req.body[attr]
+  );
+
+  if (missingAttributes.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Bad Request",
+      missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
+      message: "RS_ERR",
+      balance: 0,
+    });
+  }
+
   try {
     // Fetch the current balance from clientInfo using the fetchBalance function
-    let currentBalance = await fetchBalance(userId);
+    let currentBalance = await fetchBalance(userId, token);
     currentBalance = Number(currentBalance);
 
     if (currentBalance === null) {
-      return res.status(404).json({ error: "User not found" });
+      return res
+        .status(404)
+        .json({ error: "User not found", message: "RS_ERR", balance: 0 });
     }
 
     // Calculate the new balance as the sum of the current balance and the amount
@@ -49,9 +80,11 @@ const getResult = async (req, res) => {
       );
 
       if (betResult.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Bet not found or already settled" });
+        return res.status(404).json({
+          error: "Bet not found or already settled",
+          message: "RS_ERR",
+          balance: 0,
+        });
       }
 
       // Check if the bet status is 'OPEN' and the transaction type is 'DEBIT'
@@ -59,9 +92,12 @@ const getResult = async (req, res) => {
         betResult[0].BetStatus !== "OPEN" ||
         betResult[0].Transaction_Type !== "DEBIT"
       ) {
-        return res
-          .status(400)
-          .json({ error: "Invalid bet status or transaction type" });
+        return res.status(400).json({
+          error:
+            "Invalid bet status or transaction type or You might be hitting request for the same bet id twice",
+          message: "RS_ERR",
+          balance: 0,
+        });
       }
 
       // If the amount is greater than zero, update the clientInfo table
@@ -105,15 +141,25 @@ const getResult = async (req, res) => {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error updating result:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: "RS_ERR",
+        balance: 0,
+      });
     } finally {
       // Close the connection when done
       connection.end();
     }
   } catch (error) {
     console.error("Error connecting to the database:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: "RS_ERR",
+      balance: 0,
+    });
   }
 };
 
-module.exports = { getResult };
+module.exports = { resultbet };

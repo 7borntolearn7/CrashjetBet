@@ -18,7 +18,34 @@ const rollbackBet = async (req, res) => {
     game_code,
     reference_request_uuid,
   } = req.body;
+  const requiredAttributes = [
+    "userId",
+    "token",
+    "operatorId",
+    "currency",
+    "amount",
+    "roundId",
+    "request_uuid",
+    "bet_id",
+    "bet_time",
+    "game_id",
+    "game_code",
+    "reference_request_uuid",
+  ];
 
+  const missingAttributes = requiredAttributes.filter(
+    (attr) => !req.body[attr]
+  );
+
+  if (missingAttributes.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Bad Request",
+      missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
+      message: "RS_ERR",
+      balance: 0,
+    });
+  }
   try {
     // Create a MySQL connection
     const connection = await mysql.createConnection(dbConfig);
@@ -34,9 +61,11 @@ const rollbackBet = async (req, res) => {
       );
 
       if (betResult.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Bet not found or already rolled back" });
+        return res.status(404).json({
+          error: "Bet not found or already rolled back",
+          message: "RS_ERR",
+          amount: 0,
+        });
       }
 
       // Check if the bet status is 'DEBIT' for placebet rollback
@@ -45,7 +74,7 @@ const rollbackBet = async (req, res) => {
         betResult[0].BetStatus === "OPEN"
       ) {
         // Credit the amount back to the user's account in clientInfo table
-        const currentBalance = await fetchBalance(userId);
+        const currentBalance = await fetchBalance(userId, token);
         newBalance = Number(currentBalance) + Number(amount);
 
         await connection.execute(
@@ -66,7 +95,7 @@ const rollbackBet = async (req, res) => {
         betResult[0].BetStatus === "CLOSED"
       ) {
         // Reduce the credited amount from the user's account in clientInfo table
-        const currentBalance = await fetchBalance(userId);
+        const currentBalance = await fetchBalance(userId, token);
         newBalance = Number(currentBalance) - Number(amount);
 
         await connection.execute(
@@ -93,14 +122,21 @@ const rollbackBet = async (req, res) => {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error rolling back bet:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: "RS_ERR",
+        balance: 0,
+      });
     } finally {
       // Close the connection when done
       connection.end();
     }
   } catch (error) {
     console.error("Error connecting to the database:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: "RS_ERR", balance: 0 });
   }
 };
 
