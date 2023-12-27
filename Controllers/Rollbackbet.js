@@ -80,7 +80,7 @@ const rollbackBet = async (req, res) => {
 
       res.json({
         success: true,
-        message: "Rollback successful",
+        message: "RS_OK",
         balance: newBalance,
       });
     } catch (error) {
