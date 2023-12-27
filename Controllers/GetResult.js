@@ -1,7 +1,6 @@
 const mysql = require("mysql2/promise");
 const dbConfig = require("../Config/config");
-const { fetchBalance } = require("../Utils/Utils"); // Adjust the path accordingly
-
+const { fetchBalance } = require("../Utils/Utils"); 
 let newBalance = null;
 
 const getResult = async (req, res) => {
