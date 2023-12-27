@@ -40,7 +40,10 @@ const rollbackBet = async (req, res) => {
       }
 
       // Check if the bet status is 'DEBIT' for placebet rollback
-      if (betResult[0].Transaction_Type === "DEBIT") {
+      if (
+        betResult[0].Transaction_Type === "DEBIT" &&
+        betResult[0].BetStatus === "OPEN"
+      ) {
         // Credit the amount back to the user's account in clientInfo table
         const currentBalance = await fetchBalance(userId);
         newBalance = Number(currentBalance) + Number(amount);
@@ -58,7 +61,10 @@ const rollbackBet = async (req, res) => {
       }
 
       // Check if the bet status is 'CREDIT' for getresult rollback
-      if (betResult[0].Transaction_Type === "CREDIT") {
+      if (
+        betResult[0].Transaction_Type === "CREDIT" &&
+        betResult[0].BetStatus === "CLOSED"
+      ) {
         // Reduce the credited amount from the user's account in clientInfo table
         const currentBalance = await fetchBalance(userId);
         newBalance = Number(currentBalance) - Number(amount);
