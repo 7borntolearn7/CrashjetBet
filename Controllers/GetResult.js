@@ -17,6 +17,7 @@ const getResult = async (req, res) => {
     bet_time,
     game_id,
     game_code,
+    reference_request_uuid,
   } = req.body;
 
   try {
@@ -80,7 +81,7 @@ const getResult = async (req, res) => {
 
       // Insert a new record into the Crashbet table for the same bet_id
       await connection.execute(
-        "INSERT INTO CrashjetBet (BetStatus, Sport, ClientId, updated_on, updated_by, User_Id, token, Amount, roundId, Operator_Id, Currency, Request_UUID, Bet_Id, Bet_Time, GameId, GameCode, Transaction_Type) VALUES ('CLOSED', DEFAULT, 0, DEFAULT, DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREDIT')",
+        "INSERT INTO CrashjetBet (BetStatus, Sport, ClientId, updated_on, updated_by, User_Id, token, Amount, roundId, Operator_Id, Currency, Request_UUID, Bet_Id, Bet_Time, GameId, GameCode, Transaction_Type,reference_request_uuid) VALUES ('CLOSED', DEFAULT, 0, DEFAULT, DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREDIT',?)",
         [
           userId,
           token,
@@ -93,6 +94,7 @@ const getResult = async (req, res) => {
           bet_time,
           game_id,
           game_code,
+          reference_request_uuid,
         ]
       );
 

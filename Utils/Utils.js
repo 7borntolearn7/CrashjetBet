@@ -1,5 +1,5 @@
 const mysql = require("mysql2/promise");
-const dbConfig = require("../Config/config"); // Adjust the path accordingly
+const dbConfig = require("../Config/config");
 
 const fetchBalance = async (userId) => {
   let connection = null;

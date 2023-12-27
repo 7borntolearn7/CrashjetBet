@@ -16,6 +16,7 @@ const placeBet = async (req, res) => {
     bet_time,
     game_id,
     game_code,
+    reference_request_uuid,
   } = req.body;
 
   try {
@@ -54,7 +55,7 @@ const placeBet = async (req, res) => {
 
       // Insert the updated record into the newly created table
       const [betResult] = await connection.execute(
-        "INSERT INTO CrashjetBet (BetStatus,Sport,ClientId,updated_on,updated_by,User_Id, token,Amount,roundId,Operator_Id,Currency,Request_UUID,Bet_Id,Bet_Time,GameId, GameCode,Transaction_Type) VALUES (DEFAULT,DEFAULT,0,DEFAULT,DEFAULT,?, ?, ?, ?, ?, ?,?,?,?,?,?,DEFAULT)",
+        "INSERT INTO CrashjetBet (BetStatus,Sport,ClientId,updated_on,updated_by,User_Id, token,Amount,roundId,Operator_Id,Currency,Request_UUID,Bet_Id,Bet_Time,GameId, GameCode,Transaction_Type,reference_request_uuid) VALUES (DEFAULT,DEFAULT,0,DEFAULT,DEFAULT,?, ?, ?, ?, ?, ?,?,?,?,?,?,DEFAULT,?)",
         [
           userId,
           token,
@@ -67,6 +68,7 @@ const placeBet = async (req, res) => {
           bet_time,
           game_id,
           game_code,
+          reference_request_uuid,
         ]
       );
 
