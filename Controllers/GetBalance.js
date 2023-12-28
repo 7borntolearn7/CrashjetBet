@@ -29,9 +29,8 @@ const getBalance = async (req, res) => {
   } catch (error) {
     console.error("Error executing query:", error);
     res.status(500).json({
-      success: false,
-      error: "Internal Server Error",
-      message: "RS_ERR",
+      success: 'RS_ERR',
+      message: "Internal Server Error",
       balance: 0,
     });
   } finally {

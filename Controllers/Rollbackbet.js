@@ -63,7 +63,6 @@ const rollbackBet = async (req, res) => {
         return res.status(404).json({
           success: "RS_ERR",
           message: "Bet not found or already rolled back",
-          
           amount: 0,
         });
       }
