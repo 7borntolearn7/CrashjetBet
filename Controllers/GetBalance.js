@@ -7,9 +7,8 @@ const getBalance = async (req, res) => {
 
   if (!userId || !token) {
     return res.status(400).json({
-      success: false,
-      error: "Bad Request",
-      message: "RS_ERR",
+      success: "RS_ERR",
+      message: "Bad Request",
       balance: 0,
     });
   }
@@ -20,14 +19,13 @@ const getBalance = async (req, res) => {
 
     if (balance === null) {
       return res.status(404).json({
-        success: false,
-        error: "User not found or invalid credentials",
-        message: "RS_ERR",
+        success: "RS_ERR",
+        message: "User not found or invalid credentials",
       });
     }
 
     console.log("Success");
-    res.json({ success: true, balance: balance, message: "RS_OK" });
+    res.json({ success: 'RS_OK', balance: balance, message: "" });
   } catch (error) {
     console.error("Error executing query:", error);
     res.status(500).json({
