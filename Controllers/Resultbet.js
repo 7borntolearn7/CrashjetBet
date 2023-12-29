@@ -40,10 +40,10 @@ const resultbet = async (req, res) => {
 
   if (missingAttributes.length > 0) {
     return res.status(400).json({
-      success: "RS_ERR",
+      balance: 0,
+      status: "RS_ERROR",
       missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
       message: "Bad Request",
-      balance: 0,
     });
   }
 
@@ -55,7 +55,7 @@ const resultbet = async (req, res) => {
     if (currentBalance === null) {
       return res
         .status(404)
-        .json({ success: "RS_ERR", message: "User not found", balance: 0 });
+        .json({ status: "RS_ERROR", message: "User not found", balance: 0 });
     }
 
     // Calculate the new balance as the sum of the current balance and the amount
@@ -80,7 +80,7 @@ const resultbet = async (req, res) => {
 
       if (betResult.length === 0) {
         return res.status(404).json({
-          success: "RS_ERR",
+          status: "RS_ERROR",
           message: "Bet not found or already settled",
           balance: 0,
         });
@@ -92,9 +92,8 @@ const resultbet = async (req, res) => {
         betResult[0].Transaction_Type !== "DEBIT"
       ) {
         return res.status(400).json({
-          success: "RS_ERR",
-          message:
-            "Invalid bet status or transaction type or You might be hitting request for the same bet id twice",
+          status: "RS_ERROR",
+          message: "Invalid bet status or transaction type or You might be hitting request for the same bet id twice",
           balance: 0,
         });
       }
@@ -135,15 +134,15 @@ const resultbet = async (req, res) => {
       // Commit the transaction
       await connection.commit();
 
-      res.json({ success: "RS_OK", balance: newBalance, message: "" });
+      res.json({balance: newBalance,  status: "RS_OK", });
     } catch (error) {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error updating result:", error);
       res.status(500).json({
-        success: "RS_ERR",
-        message: "Internal Server Error",
         balance: 0,
+        status: "RS_ERROR",
+        message: "Internal Server Error"
       });
     } finally {
       // Close the connection when done
@@ -151,10 +150,10 @@ const resultbet = async (req, res) => {
     }
   } catch (error) {
     console.error("Error connecting to the database:", error);
-    res.status(500).json({
-      success: "RS_ERR",
-      message: "Internal Server Error",
+    res.status(500).json({  
       balance: 0,
+      status: "RS_ERROR",
+      message: "Internal Server Error"
     });
   }
 };
