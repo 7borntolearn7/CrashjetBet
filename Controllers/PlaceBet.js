@@ -40,10 +40,10 @@ const placeBet = async (req, res) => {
 
   if (missingAttributes.length > 0) {
     return res.status(400).json({
-      success: "RS_ERR",
+      balance: 0,
+      status: "RS_ERROR",
       missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
       message: "Bad Request",
-      balance: 0,
     });
   }
   try {
@@ -58,9 +58,9 @@ const placeBet = async (req, res) => {
 
       if (!currentBalance) {
         return res.status(404).json({
-          success: "RS_ERR",
-          message: "User not found or invalid credentials",
           balance: 0,
+          status: "RS_ERROR",
+          message: "User not found or invalid credentials",
         });
       }
       console.log(currentBalance);
@@ -68,7 +68,7 @@ const placeBet = async (req, res) => {
       // Check if the user has enough balance to place the bet
       if (currentBalance < amount) {
         return res.status(400).json({
-          success: "RS_ERR",
+          status: "RS_ERROR",
           message: "Insufficient balance to place the bet",
         });
       }
@@ -105,19 +105,18 @@ const placeBet = async (req, res) => {
       await connection.commit();
 
       res.json({
-        success: "RS_OK",
         balance: newBalance,
         bet: betResult,
-        message: "",
+        status: "RS_OK"
       });
     } catch (error) {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error placing bet:", error);
       res.status(500).json({
-        success: "RS_ERR",
-        message: "Internal Server Error",
         balance: 0,
+        status: "RS_ERROR",
+        message: "Internal Server Error",
       });
     } finally {
       // Close the connection when done
@@ -126,9 +125,9 @@ const placeBet = async (req, res) => {
   } catch (error) {
     console.error("Error connecting to the database:", error);
     res.status(500).json({
-      success: "RS_ERR",
-      message: "Internal Server Error",
       balance: 0,
+      status: "RS_ERROR",
+      message: "Internal Server Error"
     });
   }
 };

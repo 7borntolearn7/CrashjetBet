@@ -7,9 +7,9 @@ const getBalance = async (req, res) => {
 
   if (!userId || !token) {
     return res.status(400).json({
-      success: "RS_ERR",
-      message: "Bad Request",
       balance: 0,
+      status: "RS_ERROR",
+      message: "Bad Request",
     });
   }
 
@@ -19,19 +19,19 @@ const getBalance = async (req, res) => {
 
     if (balance === null) {
       return res.status(404).json({
-        success: "RS_ERR",
+        status: "RS_ERROR",
         message: "User not found or invalid credentials",
       });
     }
 
     console.log("Success");
-    res.json({ success: "RS_OK", balance: balance, message: "" });
+    res.json({ balance: balance, status: 'RS_OK' });
   } catch (error) {
     console.error("Error executing query:", error);
     res.status(500).json({
-      success: "RS_ERR",
-      message: "Internal Server Error",
       balance: 0,
+      status: "RS_ERROR",
+      message: "Internal Server Error",
     });
   } finally {
     // Release the connection when done

@@ -39,10 +39,10 @@ const rollbackBet = async (req, res) => {
 
   if (missingAttributes.length > 0) {
     return res.status(400).json({
-      success: "RS_ERR",
+      balance: 0,
+      status: "RS_ERROR",
       message: "Bad Request",
       missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
-      balance: 0,
     });
   }
   try {
@@ -61,9 +61,9 @@ const rollbackBet = async (req, res) => {
 
       if (betResult.length === 0) {
         return res.status(404).json({
-          success: "RS_ERR",
-          message: "Bet not found or already rolled back",
           amount: 0,
+          status: "RS_ERROR",
+          message: "Bet not found or already rolled back",
         });
       }
 
@@ -113,18 +113,17 @@ const rollbackBet = async (req, res) => {
       await connection.commit();
 
       res.json({
-        success: "RS_OK",
-        message: "",
         balance: newBalance,
+        status: "RS_OK",
       });
     } catch (error) {
       // Rollback the transaction in case of an error
       await connection.rollback();
       console.error("Error rolling back bet:", error);
       res.status(500).json({
-        success: "RS_ERR",
-        message: "Internal Server Error",
         balance: 0,
+        status: "RS_ERROR",
+        message: "Internal Server Error",
       });
     } finally {
       // Close the connection when done
@@ -133,10 +132,9 @@ const rollbackBet = async (req, res) => {
   } catch (error) {
     console.error("Error connecting to the database:", error);
     res.status(500).json({
-      success: "RS_ERR",
-      message: "Internal Server Error",
-      balance: 0,
-    });
+        balance: 0,
+        status: "RS_ERROR"
+      , message: "Internal Server Error"});
   }
 };
 
