@@ -16,7 +16,6 @@ const placeBet = async (req, res) => {
     bet_time,
     game_id,
     game_code,
-    reference_request_uuid,
   } = req.body;
 
   const requiredAttributes = [
@@ -31,7 +30,6 @@ const placeBet = async (req, res) => {
     "bet_time",
     "game_id",
     "game_code",
-    "reference_request_uuid",
   ];
 
   const missingAttributes = requiredAttributes.filter(
@@ -84,7 +82,7 @@ const placeBet = async (req, res) => {
 
       // Insert the updated record into the newly created table
       const [betResult] = await connection.execute(
-        "INSERT INTO CrashjetBet (BetStatus,Sport,ClientId,updated_on,updated_by,User_Id, token,Amount,roundId,Operator_Id,Currency,Request_UUID,Bet_Id,Bet_Time,GameId, GameCode,Transaction_Type,reference_request_uuid) VALUES (DEFAULT,DEFAULT,0,DEFAULT,DEFAULT,?, ?, ?, ?, ?, ?,?,?,?,?,?,DEFAULT,?)",
+        "INSERT INTO CrashjetBet (BetStatus,Sport,ClientId,updated_on,updated_by,User_Id, token,Amount,roundId,Operator_Id,Currency,Request_UUID,Bet_Id,Bet_Time,GameId, GameCode,Transaction_Type) VALUES (DEFAULT,DEFAULT,0,DEFAULT,DEFAULT,?, ?, ?, ?, ?, ?,?,?,?,?,?,DEFAULT)",
         [
           userId,
           token,
@@ -97,7 +95,6 @@ const placeBet = async (req, res) => {
           bet_time,
           game_id,
           game_code,
-          reference_request_uuid,
         ]
       );
 
@@ -107,7 +104,7 @@ const placeBet = async (req, res) => {
       res.json({
         balance: newBalance,
         bet: betResult,
-        status: "RS_OK"
+        status: "RS_OK",
       });
     } catch (error) {
       // Rollback the transaction in case of an error
@@ -127,7 +124,7 @@ const placeBet = async (req, res) => {
     res.status(500).json({
       balance: 0,
       status: "RS_ERROR",
-      message: "Internal Server Error"
+      message: "Internal Server Error",
     });
   }
 };
