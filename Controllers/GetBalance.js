@@ -4,7 +4,8 @@ let connection = null;
 
 const getBalance = async (req, res) => {
   const { userId, token } = req.body;
-
+  console.log(userId);
+  console.log(token);
   if (!userId || !token) {
     return res.status(400).json({
       balance: 0,
@@ -25,7 +26,7 @@ const getBalance = async (req, res) => {
     }
 
     console.log("Success");
-    res.json({ balance: balance, status: 'RS_OK' });
+    res.json({ balance: balance, status: "RS_OK" });
   } catch (error) {
     console.error("Error executing query:", error);
     res.status(500).json({
