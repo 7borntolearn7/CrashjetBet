@@ -3,13 +3,13 @@ const dbConfig = require("../Config/config");
 const { fetchBalance } = require("../Utils/Utils");
 
 let newBalance = null;
+
 const rollbackBet = async (req, res) => {
   const {
     userId,
     token,
     operatorId,
     currency,
-    amount,
     roundId,
     request_uuid,
     bet_id,
@@ -17,13 +17,15 @@ const rollbackBet = async (req, res) => {
     game_id,
     game_code,
     reference_request_uuid,
+    rollbackType,
+    rollbackReason,
   } = req.body;
+
   const requiredAttributes = [
     "userId",
     "token",
     "operatorId",
     "currency",
-    "amount",
     "roundId",
     "request_uuid",
     "bet_id",
@@ -31,6 +33,8 @@ const rollbackBet = async (req, res) => {
     "game_id",
     "game_code",
     "reference_request_uuid",
+    "rollbackType",
+    "rollbackReason",
   ];
 
   const missingAttributes = requiredAttributes.filter(
@@ -45,6 +49,7 @@ const rollbackBet = async (req, res) => {
       missed: `Missing required attributes: ${missingAttributes.join(", ")}`,
     });
   }
+
   try {
     // Create a MySQL connection
     const connection = await mysql.createConnection(dbConfig);
@@ -55,59 +60,55 @@ const rollbackBet = async (req, res) => {
     try {
       // Check the latest record with the given bet_id
       const [betResult] = await connection.execute(
-        "SELECT * FROM CrashjetBet WHERE Bet_Id = ? ORDER BY id desc",
+        "SELECT * FROM CrashjetBet WHERE Bet_Id = ? ORDER BY id DESC LIMIT 1",
         [bet_id]
       );
 
       if (betResult.length === 0) {
         return res.status(404).json({
-          amount: 0,
+          balance: 0,
           status: "RS_ERROR",
           message: "Bet not found or already rolled back",
         });
       }
 
-      // Check if the bet status is 'DEBIT' for placebet rollback
-      if (
-        betResult[0].Transaction_Type === "DEBIT" &&
-        betResult[0].BetStatus === "OPEN"
-      ) {
-        // Credit the amount back to the user's account in clientInfo table
-        const currentBalance = await fetchBalance(userId, token);
-        newBalance = Number(currentBalance) + Number(amount);
+      const originalDeductedAmount = betResult[0].Amount;
 
-        await connection.execute(
-          "UPDATE clientInfo SET LimitCurr = ? WHERE token = ?",
-          [newBalance, token]
-        );
+      // Credit the original deducted amount back to the user's account in clientInfo table
+      const currentBalance = await fetchBalance(userId, token);
+      newBalance = Number(currentBalance) + Number(originalDeductedAmount);
 
-        // Update the bet status to 'ROLLBACK'
-        await connection.execute(
-          "UPDATE CrashjetBet SET BetStatus = 'ROLLBACK' WHERE Bet_Id = ? AND Transaction_Type = 'DEBIT'",
-          [bet_id]
-        );
-      }
+      await connection.execute(
+        "UPDATE clientInfo SET LimitCurr = ? WHERE token = ?",
+        [newBalance, token]
+      );
 
-      // Check if the bet status is 'CREDIT' for getresult rollback
-      if (
-        betResult[0].Transaction_Type === "CREDIT" &&
-        betResult[0].BetStatus === "CLOSED"
-      ) {
-        // Reduce the credited amount from the user's account in clientInfo table
-        const currentBalance = await fetchBalance(userId, token);
-        newBalance = Number(currentBalance) - Number(amount);
+      // Update the current bet record with BetStatus 'CLOSED'
+      await connection.execute(
+        "UPDATE CrashjetBet SET BetStatus = 'CLOSED' WHERE Bet_Id = ?",
+        [bet_id]
+      );
 
-        await connection.execute(
-          "UPDATE clientInfo SET LimitCurr = ? WHERE token = ?",
-          [newBalance, token]
-        );
-
-        // Update the bet status to 'OPEN' and transaction type to 'DEBIT'
-        await connection.execute(
-          "UPDATE CrashjetBet SET BetStatus = 'OPEN', Transaction_Type = 'DEBIT' WHERE Bet_Id = ? AND Transaction_Type = 'CREDIT'",
-          [bet_id]
-        );
-      }
+      // Insert a new record for rollback with additional fields
+      await connection.execute(
+        "INSERT INTO CrashjetBet (BetStatus, Sport, ClientId, updated_on, updated_by, User_Id, token, Amount, roundId, Operator_Id, Currency, Request_UUID, Bet_Id, Bet_Time, GameId, GameCode, Transaction_Type, reference_request_uuid, RollbackType, RollbackReason) VALUES ('ROLLBACK', DEFAULT, 0, DEFAULT, DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREDIT',?,?,?)",
+        [
+          userId,
+          token,
+          originalDeductedAmount,
+          roundId,
+          operatorId,
+          currency,
+          request_uuid,
+          bet_id,
+          bet_time,
+          game_id,
+          game_code,
+          reference_request_uuid,
+          rollbackType,
+          rollbackReason,
+        ]
+      );
 
       // Commit the transaction
       await connection.commit();
@@ -132,9 +133,10 @@ const rollbackBet = async (req, res) => {
   } catch (error) {
     console.error("Error connecting to the database:", error);
     res.status(500).json({
-        balance: 0,
-        status: "RS_ERROR"
-      , message: "Internal Server Error"});
+      balance: 0,
+      status: "RS_ERROR",
+      message: "Internal Server Error",
+    });
   }
 };
 
