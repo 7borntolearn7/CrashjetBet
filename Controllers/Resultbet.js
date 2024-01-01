@@ -1,6 +1,6 @@
-const mysql = require("mysql2/promise");
-const dbConfig = require("../Config/config");
+const { sqlPromise } = require("../Config/config");
 const { fetchBalance } = require("../Utils/Utils");
+
 let newBalance = null;
 
 const resultbet = async (req, res) => {
@@ -58,102 +58,45 @@ const resultbet = async (req, res) => {
         .json({ status: "RS_ERROR", message: "User not found", balance: 0 });
     }
 
+    console.log(currentBalance);
+
     // Calculate the new balance as the sum of the current balance and the amount
     newBalance = currentBalance + Number(amount);
 
-    console.log(currentBalance);
     console.log(amount);
     console.log(newBalance);
 
-    // Create a MySQL connection
-    const connection = await mysql.createConnection(dbConfig);
+    // Execute the update and insert queries using sqlPromise.query
+    const [updateResult] = await sqlPromise.query(
+      "UPDATE clientInfo SET LimitCurr = ? WHERE token = ?",
+      [newBalance, token]
+    );
 
-    // Start a transaction
-    await connection.beginTransaction();
+    const [betResult] = await sqlPromise.query(
+      "INSERT INTO CrashjetBet (BetStatus, Sport, ClientId, updated_on, updated_by, User_Id, token, Amount, roundId, Operator_Id, Currency, Request_UUID, Bet_Id, Bet_Time, GameId, GameCode, Transaction_Type, reference_request_uuid) VALUES ('CLOSED', DEFAULT, 0, DEFAULT, DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREDIT', ?)",
+      [
+        userId,
+        token,
+        amount,
+        roundId,
+        operatorId,
+        currency,
+        request_uuid,
+        bet_id,
+        bet_time,
+        game_id,
+        game_code,
+        reference_request_uuid,
+      ]
+    );
 
-    try {
-      // Check if the bet with the given bet_id exists
-      const [betResult] = await connection.execute(
-        "SELECT * FROM CrashjetBet WHERE Bet_Id = ?",
-        [bet_id]
-      );
-
-      if (betResult.length === 0) {
-        return res.status(404).json({
-          status: "RS_ERROR",
-          message: "Bet not found or already settled",
-          balance: 0,
-        });
-      }
-
-      // Check if the bet status is 'OPEN' and the transaction type is 'DEBIT'
-      if (
-        betResult[0].BetStatus !== "OPEN" ||
-        betResult[0].Transaction_Type !== "DEBIT"
-      ) {
-        return res.status(400).json({
-          status: "RS_ERROR",
-          message: "Invalid bet status or transaction type or You might be hitting request for the same bet id twice",
-          balance: 0,
-        });
-      }
-
-      // If the amount is greater than zero, update the clientInfo table
-      if (amount > 0) {
-        await connection.execute(
-          "UPDATE clientInfo SET LimitCurr = ? WHERE token = ?",
-          [newBalance, token]
-        );
-      }
-
-      // Update the bet record in the Crashbet table with BetStatus as 'CLOSED'
-      await connection.execute(
-        "UPDATE CrashjetBet SET BetStatus = 'CLOSED' WHERE Bet_Id = ?",
-        [bet_id]
-      );
-
-      // Insert a new record into the Crashbet table for the same bet_id
-      await connection.execute(
-        "INSERT INTO CrashjetBet (BetStatus, Sport, ClientId, updated_on, updated_by, User_Id, token, Amount, roundId, Operator_Id, Currency, Request_UUID, Bet_Id, Bet_Time, GameId, GameCode, Transaction_Type,reference_request_uuid) VALUES ('CLOSED', DEFAULT, 0, DEFAULT, DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREDIT',?)",
-        [
-          userId,
-          token,
-          amount,
-          roundId,
-          operatorId,
-          currency,
-          request_uuid,
-          bet_id,
-          bet_time,
-          game_id,
-          game_code,
-          reference_request_uuid,
-        ]
-      );
-
-      // Commit the transaction
-      await connection.commit();
-
-      res.json({balance: newBalance,  status: "RS_OK", });
-    } catch (error) {
-      // Rollback the transaction in case of an error
-      await connection.rollback();
-      console.error("Error updating result:", error);
-      res.status(500).json({
-        balance: 0,
-        status: "RS_ERROR",
-        message: "Internal Server Error"
-      });
-    } finally {
-      // Close the connection when done
-      connection.end();
-    }
+    res.json({ balance: newBalance, status: "RS_OK" });
   } catch (error) {
-    console.error("Error connecting to the database:", error);
-    res.status(500).json({  
+    console.error("Error updating result:", error);
+    res.status(500).json({
       balance: 0,
       status: "RS_ERROR",
-      message: "Internal Server Error"
+      message: "Internal Server Error",
     });
   }
 };
