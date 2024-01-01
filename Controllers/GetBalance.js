@@ -1,11 +1,10 @@
 const { fetchBalance } = require("../Utils/Utils");
 
-let connection = null;
-
 const getBalance = async (req, res) => {
   const { userId, token } = req.body;
   console.log(userId);
   console.log(token);
+
   if (!userId || !token) {
     return res.status(400).json({
       balance: 0,
@@ -17,6 +16,7 @@ const getBalance = async (req, res) => {
   try {
     // Use the fetchBalance function to get the balance
     const balance = await fetchBalance(userId, token);
+    console.log(balance);
 
     if (balance === null) {
       return res.status(404).json({
@@ -34,11 +34,6 @@ const getBalance = async (req, res) => {
       status: "RS_ERROR",
       message: "Internal Server Error",
     });
-  } finally {
-    // Release the connection when done
-    if (connection) {
-      await connection.end();
-    }
   }
 };
 
